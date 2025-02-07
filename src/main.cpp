@@ -13,6 +13,7 @@
 
 #include "camera_pins.h"
 
+
 unsigned long lastCaptureTime = 0; // Last shooting time
 int imageCount = 1;                // File Counter
 bool camera_sign = false;          // Check camera status
