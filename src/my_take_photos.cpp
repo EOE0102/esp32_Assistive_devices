@@ -8,7 +8,7 @@
 
 
 // SD card write file
-void writeFile(fs::FS &fs, const char * path, uint8_t * data, size_t len){
+void writeFileImage(fs::FS &fs, const char * path, uint8_t * data, size_t len){
     Serial.printf("Writing file: %s\r\n", path);
 
     File file = fs.open(path, FILE_WRITE);
@@ -32,13 +32,16 @@ void photo_save(const char * fileName) {
     Serial.println("Failed to get camera frame buffer");
     return;
   }
+  else{
   // Save photo to file
-  writeFile(SD, fileName, fb->buf, fb->len);
+  writeFileImage(SD, fileName, fb->buf, fb->len);
   
   // Release image buffer
   esp_camera_fb_return(fb);
 
   Serial.println("Photo saved to file");
+  }
+
 }
 
 

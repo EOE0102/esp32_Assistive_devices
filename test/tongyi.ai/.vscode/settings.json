@@ -1,0 +1,5 @@
+{
+    "idf.espIdfPathWin": "D:/Apps/Espressif/frameworks/esp-idf-v5.1.5/",
+    "idf.toolsPathWin": "D:\\Apps\\Espressif",
+    "idf.portWin": "COM3"
+}

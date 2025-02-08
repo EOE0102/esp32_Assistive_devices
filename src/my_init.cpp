@@ -13,6 +13,13 @@ camera_config_t my_pin_init(void){
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer = LEDC_TIMER_0;
+
+  config.pin_pwdn = PWDN_GPIO_NUM;
+  config.pin_reset = RESET_GPIO_NUM;
+  config.pin_xclk = XCLK_GPIO_NUM;
+  config.pin_sscb_sda = SIOD_GPIO_NUM;
+  config.pin_sscb_scl = SIOC_GPIO_NUM;
+
   config.pin_d0 = Y2_GPIO_NUM;
   config.pin_d1 = Y3_GPIO_NUM;
   config.pin_d2 = Y4_GPIO_NUM;
@@ -21,19 +28,17 @@ camera_config_t my_pin_init(void){
   config.pin_d5 = Y7_GPIO_NUM;
   config.pin_d6 = Y8_GPIO_NUM;
   config.pin_d7 = Y9_GPIO_NUM;
-  config.pin_xclk = XCLK_GPIO_NUM;
+
   config.pin_pclk = PCLK_GPIO_NUM;
   config.pin_vsync = VSYNC_GPIO_NUM;
   config.pin_href = HREF_GPIO_NUM;
-  config.pin_sscb_sda = SIOD_GPIO_NUM;
-  config.pin_sscb_scl = SIOC_GPIO_NUM;
-  config.pin_pwdn = PWDN_GPIO_NUM;
-  config.pin_reset = RESET_GPIO_NUM;
+
   config.xclk_freq_hz = 20000000;
-  config.frame_size = FRAMESIZE_UXGA;
-  config.pixel_format = PIXFORMAT_JPEG; // for streaming
-  config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
   config.fb_location = CAMERA_FB_IN_PSRAM;
+  config.pixel_format = PIXFORMAT_JPEG; // for streaming
+  config.frame_size = FRAMESIZE_UXGA;
+
+  config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
   config.jpeg_quality = 12;
   config.fb_count = 1;
   
@@ -68,6 +73,7 @@ bool my_camera_init(const camera_config_t &config){
     return false;
   }
   // camera_sign = true; // Camera initialization check passes
+  Serial.println("Camera Ready");
   return true;
 }
 
@@ -99,7 +105,7 @@ bool my_SD_card_init(void){
   }
 
 
-  Serial.println("Photos will begin in one minute, please be ready.");
+  Serial.println("SD CARD READY");
   // sd_sign = true; // sd initialization check passes
   return true;
 }
