@@ -1,5 +1,5 @@
-#ifndef _AUDIO_RECORD_H
-#define _AUDIO_RECORD_H
+#ifndef AUDIO_RECORD_H
+#define AUDIO_RECORD_H
 
 #include <Arduino.h>
 #include "base64.h"

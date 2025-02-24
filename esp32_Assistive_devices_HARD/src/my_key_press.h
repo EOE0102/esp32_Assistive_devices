@@ -2,16 +2,21 @@
 #define MY_KEY_PRESS_H
 
 #include <Arduino.h>
-#include <Bounce2.h>
 
 class KeyPressHandler {
 public:
     KeyPressHandler(int pin);
-    void update();
-    bool isPressed() const;
+    void begin();
+    bool isPressed();
 
 private:
-    Bounce debouncer;
+    int pin;
+    unsigned long lastDebounceTime;
+    unsigned long debounceDelay;
+    int buttonState;
+    int lastButtonState;
 };
+
+
 
 #endif // MY_KEY_PRESS_H
