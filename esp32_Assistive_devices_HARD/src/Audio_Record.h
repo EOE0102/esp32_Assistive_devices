@@ -3,14 +3,19 @@
 
 #include <Arduino.h>
 #include "base64.h"
-#include "I2S.h"
+#include "MY_I2S.h"
 #include <WiFi.h>
 #include <ArduinoJson.h>
+
+// RecordAndSaveFile()
+#include <FS.h>
+#include <SD.h>
+#include <SPI.h>
 
 // 16位，单声道，16000Hz，线性PCM
 class Audio_Record
 {
-  I2S *i2s;
+  MY_I2S *i2s;
   static const int headerSize = 44;
   static const int i2sBufferSize = 5120;
   char i2sBuffer[i2sBufferSize];
@@ -42,10 +47,12 @@ public:
 
   Audio_Record(uint8_t PIN_I2S_BCLK, uint8_t PIN_I2S_LRC, uint8_t PIN_I2S_DIN);
   ~Audio_Record();
+  void init();
   void Record();
+  void SaveFile();//For Debug
   float calculateRMS(uint8_t *buffer, int bufferSize);
   void clear();
-  void init();
+
 };
 
 #endif // _AUDIO_H

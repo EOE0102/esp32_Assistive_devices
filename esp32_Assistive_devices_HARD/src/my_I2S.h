@@ -1,5 +1,5 @@
-#ifndef I2S_H
-#define I2S_H
+#ifndef MY_I2S_H
+#define MY_I2S_H
 #include <Arduino.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -13,10 +13,10 @@ enum MicType {
   M5STACKFIRE
 };
 
-class I2S {
+class MY_I2S {
   i2s_bits_per_sample_t BITS_PER_SAMPLE;
 public:
-  I2S(uint8_t PIN_I2S_BCLK, uint8_t PIN_I2S_LRC, uint8_t PIN_I2S_DIN);
+  MY_I2S(uint8_t PIN_I2S_BCLK, uint8_t PIN_I2S_LRC, uint8_t PIN_I2S_DIN);
   int Read(char* data, int numData);
   int GetBitPerSample();
   void clear();

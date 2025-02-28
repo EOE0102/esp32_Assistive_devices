@@ -1,11 +1,20 @@
 #include "Audio_Record.h"
 
+
+
+// SD卡配置 (XIAO ESP32S3专用)
+#define SD_CS_PIN 21       // SD卡片选引脚
+#define WAV_FILE_NAME "/recording.wav"
+#define SAMPLE_RATE 16000  // 必须与I2S配置一致
+#define CHANNELS 1         // 单声道
+#define WAV_HEADER_SIZE 44
+
 Audio_Record::Audio_Record(uint8_t PIN_I2S_BCLK, uint8_t PIN_I2S_LRC, uint8_t PIN_I2S_DIN)
 {
   // 构造函数中初始化成员变量和分配内存
   wavData = nullptr;
   i2s = nullptr;
-  i2s = new I2S(PIN_I2S_BCLK, PIN_I2S_LRC, PIN_I2S_DIN);
+  i2s = new MY_I2S(PIN_I2S_BCLK, PIN_I2S_LRC, PIN_I2S_DIN);
 
   // wavData = new char*[wavDataSize/dividedWavDataSize];
   // for (int i = 0; i < wavDataSize/dividedWavDataSize; ++i) wavData[i] = new char[dividedWavDataSize];
@@ -59,17 +68,24 @@ void Audio_Record::CreateWavHeader(byte *header, int waveDataSize)
   header[21] = 0x00;
   header[22] = 0x01; // 单声道
   header[23] = 0x00;
-  header[24] = 0x80; // 采样率16000
-  header[25] = 0x3E;
-  header[26] = 0x00;
-  header[27] = 0x00;
-  header[28] = 0x00; // 字节/秒 = 16000x2x1 = 32000
-  header[29] = 0x7D;
-  header[30] = 0x00;
-  header[31] = 0x00;
-  header[32] = 0x02; // 16位单声道
+  // 修正采样率设置
+  uint32_t sampleRate = SAMPLE_RATE;
+
+  header[24] = (byte)(sampleRate & 0xFF);
+  header[25] = (byte)((sampleRate >> 8) & 0xFF);
+  header[26] = (byte)((sampleRate >> 16) & 0xFF);
+  header[27] = (byte)((sampleRate >> 24) & 0xFF);
+
+  // 修正字节率计算
+  uint32_t byteRate = SAMPLE_RATE * 2 * CHANNELS; // 16bit = 2 bytes
+  header[28] = (byte)(byteRate & 0xFF);
+  header[29] = (byte)((byteRate >> 8) & 0xFF);
+  header[30] = (byte)((byteRate >> 16) & 0xFF);
+  header[31] = (byte)((byteRate >> 24) & 0xFF);
+
+  header[32] = 0x02; // 16位单声道 BlockAlign
   header[33] = 0x00;
-  header[34] = 0x10; // 16位
+  header[34] = 0x10; // 16位 BitsPerSample (16位)
   header[35] = 0x00;
   header[36] = 'd';
   header[37] = 'a';
@@ -81,6 +97,9 @@ void Audio_Record::CreateWavHeader(byte *header, int waveDataSize)
   header[43] = (byte)((waveDataSize >> 24) & 0xFF);
 }
 
+
+
+
 void Audio_Record::Record()
 {
   i2s->Read(i2sBuffer, i2sBufferSize);
@@ -89,44 +108,72 @@ void Audio_Record::Record()
     wavData[0][2 * i] = i2sBuffer[8 * i + 2];
     wavData[0][2 * i + 1] = i2sBuffer[8 * i + 3];
   }
-
-  // client.print("\r\n");
-
-  // unsigned long startTime = millis();
-  // while (_client->available() == 0)
-  // {
-  //   if (millis() - startTime > 5000)
-  //   { // 5秒超时
-  //     Serial.println(">>> Client Timeout!");
-  //     _client->stop();
-  //     return "false";
-  //   }
-  // }
-  // // Serial.println("123");
-  // char c = 0;
-  // int q = 0;
-
-  // if (_client->available())
-  // {
-  //   String response = _client->readString();
-
-  //   Serial.println(response);
-
-  //   int jsonStartIndex = response.indexOf("\r\n\r\n") + 4;
-  //   String jsonResponse = response.substring(jsonStartIndex);
-
-  //   Question = parseJSON(jsonResponse.c_str());
-  //   // int len = Question.length();
-  //   // Question = Question.substring(0, (len - 1));
-  //   // Question = "\"" + Question + "\"";
-  //   Serial.println(Question);
-  // }
-
-  // Serial.println("456");
-
-  // _client->stop();
-  // return Question;
 }
+
+
+
+
+
+void Audio_Record::SaveFile()
+{
+  // 初始化SD卡
+  if (!SD.begin(SD_CS_PIN)) {
+    Serial.println("SD Card Mount Failed");
+    return;
+  }
+
+  // 删除旧文件
+  if (SD.exists(WAV_FILE_NAME)) {
+    SD.remove(WAV_FILE_NAME);
+  }
+
+  // 创建WAV文件并写入初始头
+  File wavFile = SD.open(WAV_FILE_NAME, FILE_WRITE);
+  if (!wavFile) {
+    Serial.println("Create File Failed");
+    return;
+  }
+
+  // 生成初始WAV头（数据长度置0）
+  byte wavHeader[44];
+  CreateWavHeader(wavHeader, 0);
+  wavFile.write(wavHeader, sizeof(wavHeader));
+
+  uint32_t totalDataSize = 0;
+  bool recording = true;
+
+  while (recording) {
+    // 采集音频数据
+    Record();  // 调用现有Record方法填充wavData
+    
+    // 写入SD卡（每次写入1280字节）
+    size_t written = wavFile.write((const uint8_t*)wavData[0], 1280);
+    
+    if (written != 1280) {
+      Serial.println("Write Error");
+      break;
+    }
+    
+    totalDataSize += written;
+
+    // 添加停止条件（示例：按按键停止）
+    if (recording) {
+      recording = false;
+    }
+  }
+
+  // 回写更新WAV头
+  wavFile.seek(0);
+  CreateWavHeader(wavHeader, totalDataSize);
+  wavFile.write(wavHeader, sizeof(wavHeader));
+  wavFile.close();
+
+  Serial.printf("Recording Saved: %u bytes\n", totalDataSize);
+
+}
+
+
+
 
 String Audio_Record::parseJSON(const char *jsonResponse)
 {
@@ -167,3 +214,5 @@ float Audio_Record::calculateRMS(uint8_t *buffer, int bufferSize)
   // 返回RMS值
   return sqrt(sum);
 }
+
+

@@ -1,4 +1,4 @@
-#include "I2S.h"
+#include "MY_I2S.h"
 #define SAMPLE_RATE (16000)
 
 const i2s_port_t I2S_PORT = I2S_NUM_0;
@@ -10,7 +10,7 @@ const int BLOCK_SIZE = 128;
 //  -   Data bits are MSB first.
 //  -   DATA bits are left-aligned with respect to LRC edge.
 //  -   DATA bits are right-shifted by one with respect to LRC edges.
-I2S::I2S(uint8_t PIN_I2S_BCLK, uint8_t PIN_I2S_LRC, uint8_t PIN_I2S_DIN)
+MY_I2S::MY_I2S(uint8_t PIN_I2S_BCLK, uint8_t PIN_I2S_LRC, uint8_t PIN_I2S_DIN)
 {
 
   BITS_PER_SAMPLE = I2S_BITS_PER_SAMPLE_32BIT;
@@ -34,19 +34,20 @@ I2S::I2S(uint8_t PIN_I2S_BCLK, uint8_t PIN_I2S_LRC, uint8_t PIN_I2S_DIN)
   i2s_set_clk(I2S_NUM_0, SAMPLE_RATE, BITS_PER_SAMPLE, I2S_CHANNEL_STEREO);
 }
 
-int I2S::Read(char *data, int numData)
+int MY_I2S::Read(char *data, int numData)
 {
   size_t bytesRead;
+  //i2s_read(I2S_NUM_0, rec_buffer, record_size, &sample_size, portMAX_DELAY);
   i2s_read(I2S_NUM_0, (char *)data, numData, &bytesRead, portMAX_DELAY);
   return bytesRead;
 }
 
-int I2S::GetBitPerSample()
+int MY_I2S::GetBitPerSample()
 {
   return (int)BITS_PER_SAMPLE;
 }
 
-void I2S::clear()
+void MY_I2S::clear()
 {
   i2s_zero_dma_buffer(I2S_NUM_0);
 }

@@ -1,7 +1,7 @@
 /* 
  * 适用于 Seeed XIAO ESP32S3 Sense 的 WAV 录音程序
 */
-#include <Arduino.h>
+
 #include <I2S.h>
 #include "FS.h"
 #include "SD.h"
@@ -16,10 +16,6 @@
 #define SAMPLE_BITS 16
 #define WAV_HEADER_SIZE 44
 #define VOLUME_GAIN 2
-
-
-void generate_wav_header(uint8_t *wav_header, uint32_t wav_size, uint32_t sample_rate);
-void record_wav();
 
 void setup() {
   Serial.begin(115200);
