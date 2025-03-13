@@ -14,6 +14,7 @@ void connectToWiFi(const char* ssid, const char* password);
 String getTimeFromServer();
 String checkAndPrintServerTime(const char* ssid, const char* password);
 
+void setup_ntp_client();
 
 String unixTimeToGMTString(time_t unixTime);
 String getDateTime();

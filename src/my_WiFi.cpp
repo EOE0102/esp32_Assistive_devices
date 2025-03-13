@@ -135,10 +135,6 @@ void setup_ntp_client()
     timeClient.setTimeOffset(+28800);
 }
 
-bool timeste = 0;
-String stttext = "";
-bool sttste = 0;
-
 String unixTimeToGMTString(time_t unixTime)
 {
     char buffer[80];
