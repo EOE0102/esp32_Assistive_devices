@@ -5,12 +5,17 @@
 #include <WiFi.h>          // 包含WiFi库
 #include <HTTPClient.h>    // 包含HTTPClient库
 
+#include <NTPClient.h>
+#include <WiFiUdp.h>
+
+
 // Web服务器和Preferences对象
 void connectToWiFi(const char* ssid, const char* password);
 String getTimeFromServer();
 String checkAndPrintServerTime(const char* ssid, const char* password);
 
 
-
+String unixTimeToGMTString(time_t unixTime);
+String getDateTime();
 
 #endif

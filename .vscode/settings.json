@@ -9,6 +9,7 @@
         "string_view": "cpp",
         "initializer_list": "cpp",
         "regex": "cpp",
-        "new": "cpp"
+        "new": "cpp",
+        "*.tcc": "cpp"
     }
 }

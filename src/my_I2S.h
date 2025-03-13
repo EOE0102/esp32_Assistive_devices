@@ -22,4 +22,9 @@ public:
   void clear();
 };
 
+
+void i2s_install();
+void i2s_setpin();
+
+
 #endif // _I2S_H

@@ -118,9 +118,51 @@ String checkAndPrintServerTime(const char* ssid, const char* password) {
 
 
 
+//来自例程 xunfei STT
 
 
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org");
 
+void setup_ntp_client()
+{
+    timeClient.begin();
+    // 设置时区
+    // GMT +1 = 3600
+    // GMT +8 = 28800
+    // GMT -1 = -3600
+    // GMT 0 = 0
+    timeClient.setTimeOffset(+28800);
+}
+
+bool timeste = 0;
+String stttext = "";
+bool sttste = 0;
+
+String unixTimeToGMTString(time_t unixTime)
+{
+    char buffer[80];
+    struct tm timeinfo;
+    gmtime_r(&unixTime, &timeinfo);
+    strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", &timeinfo);
+    return String(buffer);
+}
+
+String getDateTime()
+{
+  // 请求网络时间
+    timeClient.update();
+
+    unsigned long epochTime = timeClient.getEpochTime();
+    Serial.print("Epoch Time: ");
+    Serial.println(epochTime);
+
+    String timeString = unixTimeToGMTString(epochTime);
+
+    // 打印结果
+    Serial.println(timeString);
+    return timeString;
+}
 
 
 
