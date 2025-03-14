@@ -44,13 +44,11 @@ bool answer_ste = 0;
 
 
 //讯飞TTS相关
-#include "Base64_Arturo.h"
-#include <ArduinoWebsockets.h>
-#include <ArduinoJson.h>
+#include "my_STT.h"
 
 bool timeste = 0;
 String stttext = "";
-bool sttste = 0;
+bool sttste = false;
 
 // 讯飞STT 的key
 String STTAPPID = "304358f2";
@@ -58,6 +56,13 @@ const char *STTAPISecret = "NjFmYjA2OWFiZTk4ZmE5OTU4NjUyZTgz";
 const char *STTAPIKey = "6da7ae9a118c30d95a71b51ab122a9fd";
 
 
+
+//QwenAPI
+const char* apiKey = "sk-5554bc3278ef431e9099f5e05dbf6221";
+
+// Send request to API
+String inputText = "你好，通义千问！";
+String apiUrl = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
 
 
 
@@ -69,58 +74,6 @@ const char *STTAPIKey = "6da7ae9a118c30d95a71b51ab122a9fd";
 #include "camera_pins.h"
 
 
-
-// 处理url格式
-String formatDateForURL(String dateString)
-{
-  // 替换空格为 "+"
-    dateString.replace(" ", "+");
-    dateString.replace(",", "%2C");
-    dateString.replace(":", "%3A");
-    return dateString;
-}
-
-#include <base64.h>
-
-// 构造讯飞ws连接url
-String XF_wsUrl(const char *Secret, const char *Key, String request, String host)
-{
-    String timeString = getDateTime();
-    String signature_origin = "host: " + host;
-    signature_origin += "\n";
-    signature_origin += "date: ";
-    signature_origin += timeString;
-    signature_origin += "\n";
-    signature_origin += "GET " + request + " HTTP/1.1";
-
-    // 使用 mbedtls 计算 HMAC-SHA256
-    unsigned char hmacResult[32]; // SHA256 产生的哈希结果长度为 32 字节
-    mbedtls_md_context_t ctx;
-    mbedtls_md_type_t md_type = MBEDTLS_MD_SHA256;
-    mbedtls_md_init(&ctx);
-    mbedtls_md_setup(&ctx, mbedtls_md_info_from_type(md_type), 1); // 1 表示 HMAC
-    mbedtls_md_hmac_starts(&ctx, (const unsigned char *)Secret, strlen(Secret));
-    mbedtls_md_hmac_update(&ctx, (const unsigned char *)signature_origin.c_str(), signature_origin.length());
-    mbedtls_md_hmac_finish(&ctx, hmacResult);
-    mbedtls_md_free(&ctx);
-    // 对结果进行 Base64 编码
-    String base64Result = base64::encode(hmacResult, 32);
-
-    String authorization_origin = "api_key=\"";
-    authorization_origin += Key;
-    authorization_origin += "\", algorithm=\"hmac-sha256\", headers=\"host date request-line\", signature=\"";
-    authorization_origin += base64Result;
-    authorization_origin += "\"";
-    String authorization = base64::encode(authorization_origin);
-
-    String url = "ws://" + host + request;
-    url += "?authorization=";
-    url += authorization;
-    url += "&date=";
-    url += formatDateForURL(timeString);
-    url += "&host=" + host;
-    return url;
-}
 
 #include <ArduinoWebsockets.h>
 using namespace websockets;
@@ -212,6 +165,97 @@ void STTsend()
 
 
 
+String answer;
+String getGPTAnswer(String inputText) {
+    HTTPClient http;
+    http.setTimeout(10000);
+    http.begin(apiUrl);
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("Authorization", String(apiKey));
+    
+    String roleContent = "你是一个辅助残疾人对话的大语言模型，你的名字是小曦。"
+                        "你的主要工作是提供情绪价值，为用户提供各类对话服务，让用户开心。"
+                        "回话的部分不要带有任何表情包。要求下面的回答严格控制在256字符以内。"
+                        "如果用户表示需要结束对话的情况，你要说，好的，期待和你的下一次对话";
+    String payload = R"({
+        "model":"qwen-turbo",
+        "input":{
+            "messages":[
+                {
+                    "role": "system",
+                    "content": ")" + roleContent + R"("
+                },
+                {
+                    "role": "user",
+                    "content": ")" + inputText + R"("
+                }
+            ]
+        }
+    })";
+    
+    int httpResponseCode = http.POST(payload);
+    if (httpResponseCode == 200) {
+        String response = http.getString();
+        http.end();
+        Serial.println(response);
+
+        // Parse JSON response
+        DynamicJsonDocument jsonDoc(1024);
+        deserializeJson(jsonDoc, response);
+        String outputText = jsonDoc["output"]["text"];
+        return outputText;
+        // Serial.println(outputText);
+    } else {
+        http.end();
+        Serial.printf("Error %i \n", httpResponseCode);
+        return "<error>";
+    }
+}
+
+
+
+
+
+
+
+
+
+
+// WebSocket 消息回调函数
+void onWebSocketMessage(WebsocketsMessage message) {
+    Serial.print("Got Message: ");
+    Serial.println(message.data());
+
+    DynamicJsonDocument doc(1024); // 调整大小以适应你的 JSON 数据
+    DeserializationError error = deserializeJson(doc, message.data());
+    if (error) {
+        Serial.print(F("deserializeJson() failed: "));
+        Serial.println(error.f_str());
+        return;
+    }
+
+    JsonArray ws = doc["data"]["result"]["ws"].as<JsonArray>();
+    for (JsonObject word : ws) {
+        int bg = word["bg"];
+        const char *w = word["cw"][0]["w"];
+        stttext += w;
+    }
+
+    if (doc["data"]["status"] == 2) { // 收到结束标志
+        sttste = true;
+        Serial.print("语音识别：");
+        Serial.println(stttext);
+    }
+}
+
+
+
+
+
+
+
+
+
 // the setup function runs once when you press reset or power the board
 void setup() {
     // 初始化串口通信，波特率为115200
@@ -241,46 +285,7 @@ void setup() {
         ;
     }
 
-
-
-
-
-
-
-  // run callback when messages are received
-    client.onMessage([&](WebsocketsMessage message) { // STT ws连接的回调函数
-        Serial.print("Got Message: ");
-        Serial.println(message.data());
-        JsonDocument doc;
-        DeserializationError error = deserializeJson(doc, message.data());
-        if (error)
-        {
-        Serial.print(F("deserializeJson() failed: "));
-        Serial.println(error.f_str());
-        return;
-        }
-        JsonArray ws = doc["data"]["result"]["ws"];
-        for (JsonObject word : ws)
-        {
-        int bg = word["bg"];
-        const char *w = word["cw"][0]["w"];
-        stttext += w;
-        }
-        if (doc["data"]["status"] == 2)
-        { // 收到结束标志
-        sttste = 1;
-        Serial.print("语音识别：");
-        Serial.println(stttext);
-        }
-    });
-
-
-
-
-
-
-
-
+    client.onMessage(onWebSocketMessage);
 
 }
 
@@ -290,13 +295,14 @@ void loop() {
     delay(10);
 
     // 非阻塞LED闪烁
-    board_led_blink_nonblocking(boardLED, boardLEDTimer);
+    board_led_blink_nonblocking(boardLED, boardLEDTimerPrepare);
 
 
     // 检查是否有数据可读
     if (Serial.available() > 0) {
         char command = Serial.read();
         if (command == '1') {
+            board_led_blink_nonblocking(boardLED, boardLEDTimer);
             Serial.printf("Start recognition\r\n\r\n");
 
 
@@ -333,6 +339,23 @@ void loop() {
     {
         client.poll();
     }
+
+    if (sttste) {
+        // 处理 stttext
+        Serial.print("Processing recognized text: ");
+        Serial.println(stttext);
+
+        // 在这里调用后续函数，例如发送到 GPT 或其他处理
+        String gptAnswer = getGPTAnswer(stttext);
+        Serial.print("GPT Answer: ");
+        Serial.println(gptAnswer);
+
+        // 重置标志
+        sttste = false;
+        stttext = ""; // 清空 stttext 以便下次使用
+    }
+
+
 
 
 

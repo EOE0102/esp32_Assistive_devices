@@ -11,5 +11,8 @@
 #include <base64.h>
 #include "Base64_Arturo.h"
 
+String formatDateForURL(String dateString);
+String XF_wsUrl(const char *Secret, const char *Key, String request, String host);
+
 
 #endif
